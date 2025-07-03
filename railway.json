@@ -1,0 +1,7 @@
+{
+  "build": {
+    "env": {
+      "TELEGRAM_BOT_TOKEN": "your-token-here"
+    }
+  }
+}
