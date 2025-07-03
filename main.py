@@ -9,7 +9,7 @@ from ocr_parser import parse_receipt_text
 from excel_writer import fill_excel_template
 from pathlib import Path
 
-TOKEN = "YOUR_BOT_TOKEN"
+TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 
 logging.basicConfig(level=logging.INFO)
 
