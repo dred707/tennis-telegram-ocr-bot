@@ -1,83 +1,33 @@
 import logging
 import os
 from datetime import datetime
-import pytesseract
-from PIL import Image
-import io
-import re
-
 from telegram import Update, ReplyKeyboardMarkup, InputFile
 from telegram.ext import (
     ApplicationBuilder, CommandHandler,
     MessageHandler, ContextTypes, filters
 )
 
-TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+from ocr_parser import parse_receipt_text
+from excel_writer import fill_excel_template
 
-logging.basicConfig(level=logging.INFO)
+# --- Вимикаємо надлишкові debug-логи ---
+logging.basicConfig(level=logging.WARNING)
+
+for noisy_logger in [
+    "telegram",
+    "telegram.ext",
+    "httpx",
+    "httpcore",
+    "asyncio",
+]:
+    logging.getLogger(noisy_logger).setLevel(logging.INFO)
+
+TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
 main_keyboard = ReplyKeyboardMarkup(
     [["🧾 Завантажити фото чека"]],
     resize_keyboard=True
 )
-
-def normalize_text(text: str) -> str:
-    substitutions = {
-        'TeHHuc': 'Теннис',
-        'TeHHMc': 'Теннис',
-        '¥': 'V',
-        'V ': 'V',
-        'Теннic': 'Теннис',
-    }
-    for wrong, correct in substitutions.items():
-        text = text.replace(wrong, correct)
-    return text
-
-def split_receipts_blocks(text: str):
-    text = normalize_text(text)
-    blocks = re.split(r'(Стiл\s*#\s*Теннис_V\d)', text)
-    receipts = []
-    for i in range(1, len(blocks), 2):
-        full = blocks[i] + (blocks[i + 1] if i + 1 < len(blocks) else '')
-        receipts.append(full)
-    return receipts
-
-def parse_single_receipt(text: str):
-    text = normalize_text(text)
-    table_match = re.search(r'(Теннис_V\d)', text)
-    times = re.findall(r'(\d{2}:\d{2})', text)
-
-    if not table_match or len(times) < 2:
-        return None
-
-    return {
-        "Стіл": table_match.group(1),
-        "З": times[0],
-        "По": times[1]
-    }
-
-def parse_receipt_text(img_bytes: bytes):
-    image = Image.open(io.BytesIO(img_bytes))
-    text = pytesseract.image_to_string(image)
-    blocks = split_receipts_blocks(text)
-    result = []
-    for block in blocks:
-        parsed = parse_single_receipt(block)
-        if parsed:
-            result.append(parsed)
-    if not result:
-        raise ValueError("Не знайдено жодного чека.")
-    return result
-
-def fill_excel_template(data, filename):
-    import pandas as pd
-    from io import BytesIO
-    df = pd.DataFrame(data)
-    output = BytesIO()
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        df.to_excel(writer, index=False, sheet_name='Результат')
-    output.seek(0)
-    return output
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Привіт! Обери дію:", reply_markup=main_keyboard)
@@ -98,7 +48,7 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         parsed = parse_receipt_text(img_bytes)
         filename = f"{datetime.now():%y%m%d}_BreiksCalc.xlsx"
-        excel_bytes = fill_excel_template(parsed, filename)
+        excel_bytes = fill_excel_template(parsed)
         await update.message.reply_document(document=InputFile(excel_bytes, filename=filename))
     except Exception as e:
         logging.exception("Помилка при обробці чека:")

@@ -1,8 +1,7 @@
 from openpyxl import load_workbook
 from io import BytesIO
 
-def fill_excel_template(entries, filename="output.xlsx"):
-    template_path = "template.xlsx"
+def fill_excel_template(entries, template_path="template.xlsx"):
     wb = load_workbook(template_path)
     ws = wb["main"]
 
