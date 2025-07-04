@@ -11,9 +11,8 @@ from telegram.ext import (
 from excel_writer import fill_excel_template
 from ocr_parser import parse_receipt_text
 
-TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
-
 logging.basicConfig(level=logging.INFO)
+TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 
 main_keyboard = ReplyKeyboardMarkup(
     [["🧾 Завантажити фото чека"]],
@@ -21,7 +20,7 @@ main_keyboard = ReplyKeyboardMarkup(
 )
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Привіт! Обери дію:", reply_markup=main_keyboard)
+    await update.message.reply_text(" 777 Привіт! Обери дію:", reply_markup=main_keyboard)
 
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.text == "🧾 Завантажити фото чека":
