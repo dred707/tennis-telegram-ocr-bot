@@ -1,7 +1,5 @@
-python-telegram-bot==20.7
-httpx
-openpyxl
+python-telegram-bot
+pytesseract
 Pillow
-easyocr
-Pillow
-numpy
+pandas
+xlsxwriter
