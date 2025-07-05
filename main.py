@@ -22,7 +22,7 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     photo = update.message.photo[-1]
     file = await context.bot.get_file(photo.file_id)
     os.makedirs("received", exist_ok=True)
-    filename = datetime.now().strftime("received/%Y%m%d_%H%M%S.jpg")
+    filename = datetime.now().strftime("received/%Y%m%d_%H%M%S_%f.jpg")
     await file.download_to_drive(filename)
     await update.message.reply_text("✅ Фото збережено", reply_markup=reply_markup)
 
