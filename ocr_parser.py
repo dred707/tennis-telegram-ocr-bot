@@ -85,15 +85,15 @@ def parse_receipts_from_image(image_path):
     image = Image.open(image_path).convert("RGB")
     full_text = pytesseract.image_to_string(image)
 
-    split_indices = [m.start() for m in re.finditer(r'V\d+', full_text)]
-    split_indices.append(len(full_text))
+    # Показуємо сирий OCR текст
+    logging.debug("📄 OCR сирий текст:")
+    for line in full_text.splitlines():
+        logging.debug("    " + line)
 
-    blocks = [full_text[split_indices[i]:split_indices[i+1]] for i in range(len(split_indices)-1)]
-
+    # Передаємо весь текст як один блок
     results = []
-    for block in blocks:
-        result = parse_receipt_text_block(block)
-        results.append(result)
+    result = parse_receipt_text_block(full_text)
+    results.append(result)
 
-    logging.debug(f"Результати парсингу: {results}")
+    logging.debug(f"✅ Результат для зображення: {results}")
     return results
