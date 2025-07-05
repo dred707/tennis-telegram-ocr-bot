@@ -20,20 +20,23 @@ def normalize_time_fragment(value: str, pad: str) -> str:
 
 def parse_receipt_text_block(text: str):
     lines = [line.strip() for line in text.splitlines() if line.strip()]
-    logging.debug("OCR TEXT BLOCK:\n" + "\n".join(lines))
+    logging.debug("OCR TEXT BLOCK:")
+    for l in lines:
+        logging.debug("    " + l)
 
     table_match = re.search(r'V(\d+)', text)
     table = table_match.group(1) if table_match else ""
 
-    # Знаходимо якірний рядок: найкоротший рядок з лише цифрами або з ":" і "-"
     anchor_line = None
     min_len = float('inf')
     for line in lines:
         stripped = line.replace(" ", "")
         if re.fullmatch(r'[\d:;-]+', stripped):
+            logging.debug(f"🟡 Anchor-кандидат: {stripped}")
             if len(stripped) < min_len:
                 anchor_line = stripped
                 min_len = len(stripped)
+    logging.debug(f"✅ Anchor-line знайдено: {anchor_line}")
 
     if not anchor_line:
         return {
@@ -86,10 +89,9 @@ def parse_receipts_from_image(image_path):
     image = Image.open(image_path).convert("RGB")
     full_text = pytesseract.image_to_string(image)
 
-    logging.debug(f"Обробка зображення: {image_path}")
-    logging.debug("Повний OCR текст:\n" + full_text)
+    indented_text = "\n".join("    " + line for line in full_text.splitlines())
+    logging.debug("Повний OCR текст:\n" + indented_text)
 
-    # Розділити текст на блоки по кожному знайденому V\d+
     split_indices = [m.start() for m in re.finditer(r'V\d+', full_text)]
     split_indices.append(len(full_text))
 
@@ -98,7 +100,10 @@ def parse_receipts_from_image(image_path):
     for i, block in enumerate(blocks):
         logging.debug(f"--- Блок #{i+1} ---\n{block}\n----------------")
 
-    results = [parse_receipt_text_block(block) for block in blocks]
+    results = []
+    for block in blocks:
+        result = parse_receipt_text_block(block)
+        results.append(result)
 
     logging.debug(f"Результати парсингу: {results}")
     return results
