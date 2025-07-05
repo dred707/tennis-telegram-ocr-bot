@@ -32,27 +32,33 @@ async def handle_file_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
             raise ValueError()
     except ValueError:
         await update.message.reply_text("Введіть число від 1 до 5.")
-        return ASK_FILE_COUNT
+        return ConversationHandler.END
 
-    image_files = sorted(glob.glob("received/*.jpg"), reverse=True)[:count]
-    logging.debug(f"📂 Обрані файли: {image_files}")
-    await update.message.reply_text("🔍 Аналізую чеки...")
-    all_data = []
+    try:
+        image_files = sorted(glob.glob("received/*.jpg"), reverse=True)[:count]
+        logging.debug(f"📂 Обрані файли: {image_files}")
+        await update.message.reply_text("🔍 Аналізую чеки...")
 
-    for img_path in image_files:
-        logging.debug(f"➡️ Обробка файлу: {img_path}")
-        parsed = parse_receipts_from_image(img_path)
-        all_data.extend(parsed)
-        logging.debug(f"✅ Знайдено {len(parsed)} чек(ів) у файлі.")
+        all_data = []
+        for img_path in image_files:
+            logging.debug(f"➡️ Обробка файлу: {img_path}")
+            parsed = parse_receipts_from_image(img_path)
+            all_data.extend(parsed)
+            logging.debug(f"✅ Знайдено {len(parsed)} чек(ів) у файлі.")
 
-    os.makedirs("output", exist_ok=True)
-    today_str = datetime.now().strftime("%y%m%d")
-    filename = f"{today_str}_CalcTennis.xlsx"
-    output_path = f"output/{filename}"
-    create_excel_from_parsed_data(all_data, output_path)
+        os.makedirs("output", exist_ok=True)
+        today_str = datetime.now().strftime("%y%m%d")
+        filename = f"{today_str}_CalcTennis.xlsx"
+        output_path = f"output/{filename}"
 
-    with open(output_path, "rb") as f:
-        await update.message.reply_document(document=InputFile(f), filename=os.path.basename(output_path))
+        create_excel_from_parsed_data(all_data, output_path)
+
+        with open(output_path, "rb") as f:
+            await update.message.reply_document(document=InputFile(f), filename=filename)
+
+    except Exception as e:
+        logging.exception("❌ Помилка під час обробки чеків")
+        await update.message.reply_text(f"❌ Виникла помилка:\n{str(e)}")
 
     return ConversationHandler.END
 
