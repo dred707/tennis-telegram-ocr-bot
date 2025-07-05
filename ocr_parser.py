@@ -20,8 +20,12 @@ def parse_receipt_text_block(text: str):
     for l in lines:
         logging.debug("    " + l)
 
-    table_match = re.search(r'V(\d+)', text)
-    table = table_match.group(1) if table_match else ""
+    v_match = re.search(r"V.{0,10}", text)
+    table = ""
+    if v_match:
+        v_text = v_match.group(0)[1:4]  # беремо 3 символи після V
+        digits = re.findall(r"\d", v_text)
+        table = digits[0] if digits else ""
 
     anchor_line = None
     min_len = float('inf')
