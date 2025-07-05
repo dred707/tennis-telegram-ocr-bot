@@ -31,3 +31,8 @@ def fill_excel_template(entries, template_path="template.xlsx"):
     wb.save(output)
     output.seek(0)
     return output
+
+def create_excel_from_parsed_data(parsed_data_list, output_path):
+    stream = fill_excel_template(parsed_data_list)
+    with open(output_path, "wb") as f:
+        f.write(stream.read())

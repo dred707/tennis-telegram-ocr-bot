@@ -9,56 +9,96 @@ import numpy as np
 
 logging.basicConfig(level=logging.DEBUG)
 
-def split_image_horizontally(img_bytes: bytes, parts: int = 3):
-    image = Image.open(io.BytesIO(img_bytes)).convert("RGB")
-    np_img = np.array(image)
-    width = np_img.shape[1]
-    step = width // parts
+def normalize_time_fragment(value: str, pad: str) -> str:
+    if len(value) == 2 and value.isdigit():
+        return value
+    elif len(value) == 1 and value.isdigit():
+        return pad + value
+    elif any(c.isdigit() for c in value):
+        return ''.join(c if c.isdigit() else pad for c in value).ljust(2, pad)
+    return pad * 2
 
-    segments = []
-    for i in range(parts):
-        x_start = i * step
-        x_end = (i + 1) * step if i < parts - 1 else width
-        crop = np_img[:, x_start:x_end]
-        buffer = io.BytesIO()
-        Image.fromarray(crop).save(buffer, format="PNG")
-        segments.append(buffer.getvalue())
+def parse_receipt_text_block(text: str):
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    logging.debug("OCR TEXT BLOCK:\n" + "\n".join(lines))
 
-    return segments
+    table_match = re.search(r'V(\d+)', text)
+    table = table_match.group(1) if table_match else ""
 
-def parse_receipt_text(img_bytes: bytes):
-    sub_images = split_image_horizontally(img_bytes, parts=3)
+    # Знаходимо якірний рядок: найкоротший рядок з лише цифрами або з ":" і "-"
+    anchor_line = None
+    min_len = float('inf')
+    for line in lines:
+        stripped = line.replace(" ", "")
+        if re.fullmatch(r'[\d:;-]+', stripped):
+            if len(stripped) < min_len:
+                anchor_line = stripped
+                min_len = len(stripped)
 
-    results = []
-    for sub_img in sub_images:
-        image = Image.open(io.BytesIO(sub_img))
-        text = pytesseract.image_to_string(image)
+    if not anchor_line:
+        return {
+            "Стіл": table,
+            "З": "",
+            "По": ""
+        }
 
-        logging.debug("\n=== OCR TEXT ===\n%s\n", text)
+    try:
+        anchor_idx = lines.index(next(l for l in lines if anchor_line in l.replace(" ", "")))
+    except StopIteration:
+        return {
+            "Стіл": table,
+            "З": "",
+            "По": ""
+        }
 
-        # Шукаємо номер столу
-        table_match = re.search(r'V\d+', text)
-        table = table_match.group(0) if table_match else "V?"
+    upper_line = lines[anchor_idx - 1] if anchor_idx > 0 else ""
+    upper_match = re.search(r'(\d{1,2})[:;]', upper_line)
+    start_hh_raw = upper_match.group(1) if upper_match else ""
 
-        # Рядки тексту
-        lines = text.splitlines()
+    anchor_match = re.search(r'(\d{1,2})[-:;](\d{1,2})[:;](\d{1,2})', anchor_line)
+    if anchor_match:
+        start_mm_raw = anchor_match.group(1)
+        end_hh_raw = anchor_match.group(2)
+        end_mm_raw = anchor_match.group(3)
+    else:
+        fallback = re.findall(r'(\d{1,2})', anchor_line)
+        if len(fallback) >= 2:
+            end_hh_raw, end_mm_raw = fallback[-2], fallback[-1]
+            start_mm_raw = fallback[0] if len(fallback) >= 3 else ""
+        else:
+            start_mm_raw = end_hh_raw = end_mm_raw = ""
 
-        # Шукаємо часи тільки в тих рядках, що не містять "відкрито"/"надруковано"
-        valid_lines = [line for line in lines if not re.search(r'(відкрито|надруковано)', line, re.IGNORECASE)]
-        valid_text = ' '.join(valid_lines)
+    start_hh = normalize_time_fragment(start_hh_raw, 'h')
+    start_mm = normalize_time_fragment(start_mm_raw, 'm')
+    end_hh = normalize_time_fragment(end_hh_raw, 'h')
+    end_mm = normalize_time_fragment(end_mm_raw, 'm')
 
-        # Шукаємо всі часи у форматі hh:mm або hh;mm
-        times = re.findall(r'(\d{2}[:;]\d{2})', valid_text)
-        times = [t.replace(';', ':') for t in times]
+    start_time = f"{start_hh}:{start_mm}" if start_hh or start_mm else ""
+    end_time = f"{end_hh}:{end_mm}" if end_hh or end_mm else ""
 
-        if len(times) >= 2:
-            results.append({
-                "Стіл": table,
-                "З": times[0],
-                "По": times[1]
-            })
+    return {
+        "Стіл": table,
+        "З": start_time,
+        "По": end_time
+    }
 
-    if not results:
-        raise ValueError("Не знайдено жодного чека.")
+def parse_receipts_from_image(image_path):
+    image = Image.open(image_path).convert("RGB")
+    full_text = pytesseract.image_to_string(image)
 
+    logging.debug(f"Обробка зображення: {image_path}")
+    logging.debug("Повний OCR текст:\n" + full_text)
+
+    # Розділити текст на блоки по кожному знайденому V\d+
+    split_indices = [m.start() for m in re.finditer(r'V\d+', full_text)]
+    split_indices.append(len(full_text))
+
+    blocks = [full_text[split_indices[i]:split_indices[i+1]] for i in range(len(split_indices)-1)]
+
+    for i, block in enumerate(blocks):
+        logging.debug(f"--- Блок #{i+1} ---\n{block}\n----------------")
+
+    results = [parse_receipt_text_block(block) for block in blocks]
+
+    logging.debug(f"Результати парсингу: {results}")
     return results
