@@ -5,6 +5,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, fil
 import os
 import glob
 from datetime import datetime
+from datetime import datetime
 from excel_writer import create_excel_from_parsed_data
 from ocr_parser import parse_receipts_from_image
 
@@ -55,6 +56,15 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Операцію скасовано.")
     return ConversationHandler.END
 
+
+async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    photo = update.message.photo[-1]
+    file = await context.bot.get_file(photo.file_id)
+    os.makedirs("received", exist_ok=True)
+    filename = datetime.now().strftime("received/%Y%m%d_%H%M%S_%f.jpg")
+    await file.download_to_drive(filename)
+    await update.message.reply_text("✅ Фото збережено")
+
 def main():
     application = ApplicationBuilder().token(os.getenv("TELEGRAM_BOT_TOKEN")).build()
 
@@ -67,6 +77,7 @@ def main():
     application.add_handler(CommandHandler("start", start))
     application.add_handler(conv_handler)
 
+    application.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     application.run_polling()
 
 if __name__ == "__main__":
