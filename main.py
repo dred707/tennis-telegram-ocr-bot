@@ -18,6 +18,14 @@ ASK_FILE_COUNT = range(1)
 keyboard = [["Порахувати"]]
 reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
+async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    photo = update.message.photo[-1]
+    file = await context.bot.get_file(photo.file_id)
+    os.makedirs("received", exist_ok=True)
+    filename = datetime.now().strftime("received/%Y%m%d_%H%M%S.jpg")
+    await file.download_to_drive(filename)
+    await update.message.reply_text("✅ Фото збережено", reply_markup=reply_markup)
+
 async def ask_file_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Скільки останніх файлів опрацювати? (1-5)", reply_markup=reply_markup)
     return ASK_FILE_COUNT
@@ -41,7 +49,7 @@ async def handle_file_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
     all_data = []
 
     for img_path in image_files:
-        print(f"Обробляю файл: {img_path}")  # <-- для наочності у PyCharm
+        print(f"Обробляю файл: {img_path}")
         parsed = parse_receipts_from_image(img_path)
         all_data.extend(parsed)
 
@@ -61,18 +69,7 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Операцію скасовано.", reply_markup=reply_markup)
     return ConversationHandler.END
 
-
-async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    photo = update.message.photo[-1]
-    file = await context.bot.get_file(photo.file_id)
-    os.makedirs("received", exist_ok=True)
-    filename = datetime.now().strftime("received/%Y%m%d_%H%M%S.jpg")
-    await file.download_to_drive(filename)
-    await update.message.reply_text("✅ Фото збережено", reply_markup=reply_markup)
-
-
 def main():
-
     application = ApplicationBuilder().token(os.getenv("TELEGRAM_BOT_TOKEN")).build()
 
     conv_handler = ConversationHandler(
@@ -83,6 +80,7 @@ def main():
 
     application.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     application.add_handler(conv_handler)
+
     application.run_polling()
 
 if __name__ == "__main__":
