@@ -35,11 +35,15 @@ async def handle_file_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ASK_FILE_COUNT
 
     image_files = sorted(glob.glob("received/*.jpg"), reverse=True)[:count]
+    logging.debug(f"📂 Обрані файли: {image_files}")
+    await update.message.reply_text("🔍 Аналізую чеки...")
     all_data = []
 
     for img_path in image_files:
+        logging.debug(f"➡️ Обробка файлу: {img_path}")
         parsed = parse_receipts_from_image(img_path)
         all_data.extend(parsed)
+        logging.debug(f"✅ Знайдено {len(parsed)} чек(ів) у файлі.")
 
     os.makedirs("output", exist_ok=True)
     today_str = datetime.now().strftime("%y%m%d")
