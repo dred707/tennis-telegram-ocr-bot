@@ -56,7 +56,7 @@ async def handle_image_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def process_and_respond(update: Update, context: ContextTypes.DEFAULT_TYPE, img_bytes: bytes):
     try:
         parsed = parse_receipt_text(img_bytes)
-        filename = f"{datetime.now():%y%m%d}_BreiksCalc.xlsx"
+        filename = f"{datetime.now():%y%m%d}_CalcTennis.xlsx"
         excel_bytes = fill_excel_template(parsed)
         await update.message.reply_document(document=InputFile(excel_bytes, filename=filename))
     except Exception as e:
