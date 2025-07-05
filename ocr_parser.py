@@ -1,11 +1,7 @@
-
 from PIL import Image
 import pytesseract
-import io
 import re
 import logging
-import cv2
-import numpy as np
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -89,16 +85,10 @@ def parse_receipts_from_image(image_path):
     image = Image.open(image_path).convert("RGB")
     full_text = pytesseract.image_to_string(image)
 
-    indented_text = "\n".join("    " + line for line in full_text.splitlines())
-    logging.debug("Повний OCR текст:\n" + indented_text)
-
     split_indices = [m.start() for m in re.finditer(r'V\d+', full_text)]
     split_indices.append(len(full_text))
 
     blocks = [full_text[split_indices[i]:split_indices[i+1]] for i in range(len(split_indices)-1)]
-
-    for i, block in enumerate(blocks):
-        logging.debug(f"--- Блок #{i+1} ---\n{block}\n----------------")
 
     results = []
     for block in blocks:
