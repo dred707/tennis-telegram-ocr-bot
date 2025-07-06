@@ -1,6 +1,4 @@
 python-telegram-bot
-aiohttp
 openpyxl
 pillow
 pytesseract
-nest_asyncio
