@@ -1,4 +1,3 @@
-
 import logging
 from telegram import Update, ReplyKeyboardMarkup, InputFile
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ConversationHandler, ContextTypes
@@ -71,8 +70,13 @@ async def handle_photo(update: Update, _: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("✅ Фото збережено")
     else:
         await update.message.reply_text("⚠️ Це не зображення")
+
 def main():
-    application = ApplicationBuilder().token(os.getenv("TELEGRAM_BOT_TOKEN")).build()
+    token = os.getenv("TELEGRAM_BOT_TOKEN")
+    if not token:
+        raise RuntimeError("❌ TELEGRAM_BOT_TOKEN not set in environment variables.")
+
+    application = ApplicationBuilder().token(token).build()
 
     conv_handler = ConversationHandler(
         entry_points=[MessageHandler(filters.Regex("^Порахувати$"), ask_file_count)],

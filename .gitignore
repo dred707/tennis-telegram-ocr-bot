@@ -29,10 +29,6 @@ dist/
 *.env
 .env.*
 
-# Excel or output files
-*.xlsx
-*.xls
-
 # Cache
 *.cache
 .cache/
@@ -44,3 +40,6 @@ Thumbs.db
 
 # pyproject build leftovers
 *.spec
+
+output/*
+received/*
