@@ -1,9 +1,17 @@
 import logging
-from telegram import Update, ReplyKeyboardMarkup, InputFile
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ConversationHandler, ContextTypes
 import os
 import glob
+import requests
 from datetime import datetime
+from telegram import Update, ReplyKeyboardMarkup, InputFile
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    MessageHandler,
+    filters,
+    ConversationHandler,
+    ContextTypes,
+)
 from excel_writer import create_excel_from_parsed_data
 from ocr_parser import parse_receipts_from_image
 
@@ -32,6 +40,7 @@ async def handle_file_count(update: Update, _: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Введіть число від 1 до 5.")
         return ASK_FILE_COUNT
 
+    await update.message.reply_text("🕓 Опрацьовую чеки...")
     image_files = sorted(glob.glob("received/*.jpg"), reverse=True)[:count]
     all_data = []
 
@@ -54,7 +63,6 @@ async def cancel(update: Update, _: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Операцію скасовано.")
     return ConversationHandler.END
 
-
 async def handle_photo(update: Update, _: ContextTypes.DEFAULT_TYPE):
     file = None
     if update.message.document and update.message.document.mime_type.startswith("image/"):
@@ -76,6 +84,13 @@ def main():
     if not token:
         raise RuntimeError("❌ TELEGRAM_BOT_TOKEN not set in environment variables.")
 
+    # 🔧 Скидання вебхука, щоб уникнути конфліктів з polling
+    resp = requests.get(f"https://api.telegram.org/bot{token}/deleteWebhook")
+    if resp.ok:
+        print("🔁 Webhook was deleted:", resp.json())
+    else:
+        print("⚠️ Failed to delete webhook:", resp.text)
+
     application = ApplicationBuilder().token(token).build()
 
     conv_handler = ConversationHandler(
@@ -86,9 +101,9 @@ def main():
 
     application.add_handler(CommandHandler("start", start))
     application.add_handler(conv_handler)
-
     application.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     application.add_handler(MessageHandler(filters.Document.IMAGE, handle_photo))
+
     application.run_polling()
 
 if __name__ == "__main__":
