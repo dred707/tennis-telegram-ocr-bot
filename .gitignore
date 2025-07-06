@@ -1,0 +1,46 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+.venv/
+venv/
+env/
+ENV/
+
+# VS Code / PyCharm settings
+.vscode/
+.idea/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# Logs and debug
+*.log
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Environment variables / secrets
+.env
+*.env
+.env.*
+
+# Excel or output files
+*.xlsx
+*.xls
+
+# Cache
+*.cache
+.cache/
+__pypackages__/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# pyproject build leftovers
+*.spec
