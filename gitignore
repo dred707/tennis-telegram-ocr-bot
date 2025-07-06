@@ -1,78 +1,39 @@
 
 # Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
-
-# C extensions
-*.so
-
+# Cache
 # Distribution / packaging
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
+# Environment variables / secrets
+# Excel or output files
+# Jupyter Notebook checkpoints
+# Logs and debug
+# OS files
+# VS Code / PyCharm settings
+# Virtual environment
+# pyproject build leftovers
+*$py.class
+*.cache
 *.egg-info/
-.installed.cfg
-*.egg
-
-# Virtual environments
-venv/
-ENV/
-env/
-.venv/
-
-# PyInstaller
-*.manifest
+*.env
+*.log
+*.py[cod]
 *.spec
-
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.nox/
-.coverage
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-.hypothesis/
-.pytest_cache/
-
-# Jupyter
-.ipynb_checkpoints
-
-# MyPy
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
-# Pyre
-.pyre/
-
-# IDEs
-.vscode/
-.idea/
-
-# Local dotenv/env vars
+*.xls
+*.xlsx
+.DS_Store
+.cache/
 .env
 .env.*
-
-# Excel/temporary
-*.xlsx
-*.xlsm
-~$*
-
-# Logs
-*.log
-
-# Telegram bot cache/uploads
-*.db
-*.session
+.idea/
+.ipynb_checkpoints/
+.venv/
+.vscode/
+ENV/
+Thumbs.db
+__pycache__/
+__pypackages__/
+build/
+dist/
+env/
+output/
+received/
+venv/
