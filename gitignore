@@ -1,4 +1,3 @@
-
 # Byte-compiled / optimized / DLL files
 # Cache
 # Distribution / packaging
@@ -35,5 +34,6 @@ build/
 dist/
 env/
 output/
-received/
 venv/
+received/*
+!received/.gitkeep
