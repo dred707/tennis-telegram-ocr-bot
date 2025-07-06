@@ -1,23 +1,11 @@
-import os
 import logging
-import asyncio
+from telegram import Update, ReplyKeyboardMarkup, InputFile
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ConversationHandler, ContextTypes
+import os
 import glob
 from datetime import datetime
-import nest_asyncio
-from telegram import Update, ReplyKeyboardMarkup, InputFile
-from telegram.ext import (
-    ApplicationBuilder,
-    CommandHandler,
-    MessageHandler,
-    filters,
-    ConversationHandler,
-    ContextTypes,
-)
-from aiohttp import web
 from excel_writer import create_excel_from_parsed_data
 from ocr_parser import parse_receipts_from_image
-
-nest_asyncio.apply()
 
 # --- Налаштування логування ---
 logging.basicConfig(level=logging.WARNING)
@@ -27,18 +15,18 @@ for noisy_logger in ["telegram", "telegram.ext", "httpx", "httpcore", "asyncio"]
 ASK_FILE_COUNT = range(1)
 
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def start(update: Update, _: ContextTypes.DEFAULT_TYPE):
     keyboard = [["Порахувати"]]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     await update.message.reply_text("Виберіть дію:", reply_markup=reply_markup)
 
 
-async def ask_file_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def ask_file_count(update: Update, _: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Скільки останніх файлів опрацювати? (1-5)")
     return ASK_FILE_COUNT
 
 
-async def handle_file_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_file_count(update: Update, _: ContextTypes.DEFAULT_TYPE):
     try:
         count = int(update.message.text.strip())
         if not 1 <= count <= 5:
@@ -67,18 +55,18 @@ async def handle_file_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ConversationHandler.END
 
 
-async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def cancel(update: Update, _: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Операцію скасовано.")
     return ConversationHandler.END
 
 
-async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_photo(update: Update, _: ContextTypes.DEFAULT_TYPE):
     file = None
     if update.message.document and update.message.document.mime_type.startswith("image/"):
-        file = await context.bot.get_file(update.message.document.file_id)
+        file = await _.bot.get_file(update.message.document.file_id)
     elif update.message.photo:
         photo = update.message.photo[-1]
-        file = await context.bot.get_file(photo.file_id)
+        file = await _.bot.get_file(photo.file_id)
     filename = datetime.now().strftime("%Y%m%d_%H%M%S_%f.jpg")
     if file:
         os.makedirs("received", exist_ok=True)
@@ -89,10 +77,10 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("⚠️ Це не зображення")
 
 
-async def build_application():
+def main():
     token = os.getenv("TELEGRAM_BOT_TOKEN")
     if not token:
-        raise RuntimeError("❌ TELEGRAM_BOT_TOKEN не встановлено")
+        raise RuntimeError("❌ TELEGRAM_BOT_TOKEN not set in environment variables.")
 
     application = ApplicationBuilder().token(token).build()
 
@@ -104,31 +92,11 @@ async def build_application():
 
     application.add_handler(CommandHandler("start", start))
     application.add_handler(conv_handler)
+
     application.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     application.add_handler(MessageHandler(filters.Document.IMAGE, handle_photo))
-
-    return application
-
-
-async def run_webhook():
-    app = await build_application()
-    webhook_url = os.getenv("WEBHOOK_URL")
-    await app.bot.set_webhook(webhook_url)
-    print(f"🌐 Webhook активний на: {webhook_url}")
-    return app.web_app()
-
-
-async def run_polling():
-    print("🖥 Запуск у polling-режимі (локально)")
-    app = await build_application()
-    await app.run_polling()
+    application.run_polling()
 
 
 if __name__ == "__main__":
-    webhook_url = os.getenv("WEBHOOK_URL")
-    if webhook_url:
-        loop = asyncio.get_event_loop()
-        web_app = loop.run_until_complete(run_webhook())
-        web.run_app(web_app, port=int(os.getenv("PORT", "8000")))
-    else:
-        asyncio.run(run_polling())
+    main()
