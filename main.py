@@ -57,13 +57,20 @@ async def cancel(update: Update, _: ContextTypes.DEFAULT_TYPE):
 
 
 async def handle_photo(update: Update, _: ContextTypes.DEFAULT_TYPE):
-    photo = update.message.photo[-1]
-    file = await _.bot.get_file(photo.file_id)
-    os.makedirs("received", exist_ok=True)
-    filename = datetime.now().strftime("received/%Y%m%d_%H%M%S_%f.jpg")
-    await file.download_to_drive(filename)
-    await update.message.reply_text("✅ Фото збережено")
-
+    file = None
+    if update.message.document and update.message.document.mime_type.startswith("image/"):
+        file = await _.bot.get_file(update.message.document.file_id)
+    elif update.message.photo:
+        photo = update.message.photo[-1]
+        file = await _.bot.get_file(photo.file_id)
+    filename = datetime.now().strftime("%Y%m%d_%H%M%S_%f.jpg")
+    if file:
+        os.makedirs("received", exist_ok=True)
+        path = os.path.join("received", filename)
+        await file.download_to_drive(path)
+        await update.message.reply_text("✅ Фото збережено")
+    else:
+        await update.message.reply_text("⚠️ Це не зображення")
 def main():
     application = ApplicationBuilder().token(os.getenv("TELEGRAM_BOT_TOKEN")).build()
 
