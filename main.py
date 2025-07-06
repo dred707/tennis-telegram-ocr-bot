@@ -84,6 +84,7 @@ def main():
     application.add_handler(conv_handler)
 
     application.add_handler(MessageHandler(filters.PHOTO, handle_photo))
+    application.add_handler(MessageHandler(filters.Document.IMAGE, handle_photo))
     application.run_polling()
 
 if __name__ == "__main__":
