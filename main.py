@@ -1,10 +1,9 @@
+import os
+import logging
 import asyncio
 import glob
-import logging
-import os
 from datetime import datetime
-
-from aiohttp import web
+import nest_asyncio
 from telegram import Update, ReplyKeyboardMarkup, InputFile
 from telegram.ext import (
     ApplicationBuilder,
@@ -14,9 +13,11 @@ from telegram.ext import (
     ConversationHandler,
     ContextTypes,
 )
-
+from aiohttp import web
 from excel_writer import create_excel_from_parsed_data
 from ocr_parser import parse_receipts_from_image
+
+nest_asyncio.apply()
 
 # --- Налаштування логування ---
 logging.basicConfig(level=logging.WARNING)
@@ -110,21 +111,24 @@ async def build_application():
 
 
 async def run_webhook():
-    application = await build_application()
+    app = await build_application()
     webhook_url = os.getenv("WEBHOOK_URL")
-    await application.bot.set_webhook(webhook_url)
+    await app.bot.set_webhook(webhook_url)
     print(f"🌐 Webhook активний на: {webhook_url}")
-    return application.web_app()
+    return app.web_app()
+
+
+async def run_polling():
+    print("🖥 Запуск у polling-режимі (локально)")
+    app = await build_application()
+    await app.run_polling()
 
 
 if __name__ == "__main__":
     webhook_url = os.getenv("WEBHOOK_URL")
-
     if webhook_url:
-        web.run_app(asyncio.run(run_webhook()), port=int(os.getenv("PORT", "8000")))
+        loop = asyncio.get_event_loop()
+        web_app = loop.run_until_complete(run_webhook())
+        web.run_app(web_app, port=int(os.getenv("PORT", "8000")))
     else:
-        print("🖥 Запуск у polling-режимі (локально)")
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        application = loop.run_until_complete(build_application())
-        application.run_polling()
+        asyncio.run(run_polling())
