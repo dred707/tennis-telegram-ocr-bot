@@ -117,7 +117,7 @@ async def run_webhook():
     if not webhook_url:
         raise RuntimeError("WEBHOOK_URL не встановлено")
 
-    await app.bot.set_webhook(f"{webhook_url}/webhook")
+    await app.bot.set_webhook(webhook_url.rstrip("/") + "/webhook")
 
     async def telegram_webhook_handler(request):
         data = await request.json()
