@@ -114,12 +114,10 @@ async def run_webhook():
     app = await build_application()
     webhook_url = os.getenv("WEBHOOK_URL", "").rstrip("/")
     await app.bot.set_webhook(f"{webhook_url}/webhook")
-    print(f"🌐 Webhook зареєстровано: {webhook_url}/webhook")
-
     await app.initialize()
     await app.start()
-
-    aio_app = web.Application()
+    await app.updater.start_polling()  # ← ключова стрічка
+    print(f"🌐 Webhook зареєстровано: {webhook_url}/webhook")
 
     async def telegram_webhook_handler(request):
         data = await request.json()
