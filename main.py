@@ -14,7 +14,6 @@ from telegram.ext import (
     ConversationHandler,
     ContextTypes,
 )
-
 from excel_writer import create_excel_from_parsed_data
 from ocr_parser import parse_receipts_from_image
 
@@ -113,13 +112,12 @@ async def build_application():
 
 async def run_webhook():
     app = await build_application()
-    webhook_url = os.getenv("WEBHOOK_URL")
-    if not webhook_url:
-        raise RuntimeError("WEBHOOK_URL не встановлено")
-
+    webhook_url = os.getenv("WEBHOOK_URL").rstrip("/")
     await app.bot.set_webhook(webhook_url.rstrip("/") + "/webhook")
+    print(f"🌐 Webhook зареєстровано: {webhook_url}/webhook")
 
     async def telegram_webhook_handler(request):
+        print("📥 Запит від Telegram отримано")
         data = await request.json()
         await app.update_queue.put(data)
         return web.Response()
