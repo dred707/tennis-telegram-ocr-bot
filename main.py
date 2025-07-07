@@ -135,7 +135,13 @@ async def run_webhook():
 
 async def run_polling():
     print("🖥 Запуск у polling-режимі")
+
     app = await build_application()
+
+    print("🧼 Знімаю webhook...")
+    await app.bot.delete_webhook(drop_pending_updates=True)
+
+    print("🚀 Запуск Application (polling)...")
     await app.run_polling()
 
 
