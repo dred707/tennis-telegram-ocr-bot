@@ -115,7 +115,9 @@ async def run_webhook():
     webhook_url = os.getenv("WEBHOOK_URL")
     await app.bot.set_webhook(webhook_url)
     print(f"🌐 Webhook активний на: {webhook_url}")
-    return AiohttpWebhookHandler(application=app).app
+    aio_app = web.Application()
+    aio_app.router.add_post("/webhook", app.webhook_handler())
+    return aio_app
 
 
 async def run_polling():
