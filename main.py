@@ -26,14 +26,17 @@ for noisy_logger in ["telegram", "telegram.ext", "httpx", "httpcore", "asyncio"]
 
 ASK_FILE_COUNT = range(1)
 
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [["Порахувати"]]
     markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     await update.message.reply_text("Виберіть дію:", reply_markup=markup)
 
+
 async def ask_file_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Скільки останніх файлів опрацювати? (1-5)")
     return ASK_FILE_COUNT
+
 
 async def handle_file_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
@@ -63,9 +66,11 @@ async def handle_file_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     return ConversationHandler.END
 
+
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Операцію скасовано.")
     return ConversationHandler.END
+
 
 async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     file = None
@@ -82,6 +87,7 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("✅ Фото збережено")
     else:
         await update.message.reply_text("⚠️ Це не зображення")
+
 
 async def build_application():
     token = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -103,31 +109,37 @@ async def build_application():
 
     return app
 
+
 async def run_webhook():
     app = await build_application()
     webhook_url = os.getenv("WEBHOOK_URL", "").rstrip("/")
     await app.bot.set_webhook(f"{webhook_url}/webhook")
     print(f"🌐 Webhook зареєстровано: {webhook_url}/webhook")
 
+    aio_app = web.Application()
+
     async def telegram_webhook_handler(request):
-        print("📥 Запит від Telegram отримано")
         data = await request.json()
         await app.update_queue.put(data)
+        print("📥 Запит оброблено Telegram Application")
         return web.Response()
 
-    aio_app = web.Application()
+    # Реєстрація handler'а після визначення app
     aio_app.router.add_post("/webhook", telegram_webhook_handler)
     aio_app.router.add_get("/", lambda request: web.Response(text="Bot is alive."))
     return aio_app
+
 
 async def run_polling():
     print("🖥 Запуск у polling-режимі")
     app = await build_application()
     await app.run_polling()
 
+
 if __name__ == "__main__":
     if os.getenv("WEBHOOK_URL"):
         print("🌐 Запуск у режимі webhook (Railway)")
+
 
         async def start_webhook_server():
             aio_app = await run_webhook()
@@ -138,6 +150,7 @@ if __name__ == "__main__":
             print("✅ AIOHTTP сервер запущено — очікуємо запити...")
             while True:
                 await asyncio.sleep(3600)
+
 
         asyncio.run(start_webhook_server())
     else:
