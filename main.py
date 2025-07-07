@@ -128,7 +128,17 @@ async def run_polling():
 if __name__ == "__main__":
     if os.getenv("WEBHOOK_URL"):
         print("🌐 Запуск у режимі webhook (Railway)")
-        aio_app = asyncio.get_event_loop().run_until_complete(run_webhook())
-        web.run_app(aio_app, port=int(os.getenv("PORT", "8000")))
+
+        async def start_webhook_server():
+            aio_app = await run_webhook()
+            runner = web.AppRunner(aio_app)
+            await runner.setup()
+            site = web.TCPSite(runner, host="0.0.0.0", port=int(os.getenv("PORT", "8000")))
+            await site.start()
+            print("✅ AIOHTTP сервер запущено — очікуємо запити...")
+            while True:
+                await asyncio.sleep(3600)
+
+        asyncio.run(start_webhook_server())
     else:
         asyncio.run(run_polling())
