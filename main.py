@@ -127,6 +127,7 @@ async def run_webhook():
         print("📥 Запит оброблено Telegram Application")
         return web.Response()
 
+    # Реєстрація handler'а після визначення app
     aio_app.router.add_post("/webhook", telegram_webhook_handler)
     aio_app.router.add_get("/", lambda request: web.Response(text="Bot is alive."))
     return aio_app
