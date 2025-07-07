@@ -3,5 +3,15 @@
     "env": {
       "TELEGRAM_BOT_TOKEN": "your-token-here"
     }
-  }
+  },
+  "deploy": {
+    "startCommand": "python main.py",
+    "restartPolicyType": "ON_FAILURE"
+  },
+  "ports": [
+    {
+      "port": 8000,
+      "targetPort": 8000
+    }
+  ]
 }
