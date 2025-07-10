@@ -1,17 +1,15 @@
+
 import os
 import logging
 import asyncio
 import glob
 from datetime import datetime
 import nest_asyncio
-from aiohttp import web
-from telegram import Update, ReplyKeyboardMarkup, InputFile
+from telegram import Update, InputFile
 from telegram.ext import (
     ApplicationBuilder,
-    CommandHandler,
     MessageHandler,
     filters,
-    ConversationHandler,
     ContextTypes,
 )
 from excel_writer import create_excel_from_parsed_data
@@ -19,23 +17,9 @@ from ocr_parser import parse_receipts_from_image
 
 nest_asyncio.apply()
 
-# --- Налаштування логування ---
 logging.basicConfig(level=logging.WARNING)
 for noisy_logger in ["telegram", "telegram.ext", "httpx", "httpcore", "asyncio"]:
     logging.getLogger(noisy_logger).setLevel(logging.INFO)
-
-ASK_FILE_COUNT = range(1)
-
-
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [["Порахувати"]]
-    markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-    await update.message.reply_text("Виберіть дію:", reply_markup=markup)
-
-
-async def ask_file_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Скільки останніх файлів опрацювати? (1-5)")
-    return ASK_FILE_COUNT
 
 
 async def handle_file_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -44,8 +28,8 @@ async def handle_file_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not 1 <= count <= 5:
             raise ValueError()
     except ValueError:
-        await update.message.reply_text("Введіть число від 1 до 5.")
-        return ASK_FILE_COUNT
+        await update.message.reply_text("Введіть число від 1 до 5 для обробки чеків.")
+        return
 
     await update.message.reply_text("🕓 Опрацьовую чеки...")
     image_files = sorted(glob.glob("received/*.jpg"), reverse=True)[:count]
@@ -63,13 +47,6 @@ async def handle_file_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     with open(output_path, "rb") as f:
         await update.message.reply_document(document=InputFile(f), filename=os.path.basename(output_path))
-
-    return ConversationHandler.END
-
-
-async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Операцію скасовано.")
-    return ConversationHandler.END
 
 
 async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -96,14 +73,7 @@ async def build_application():
 
     app = ApplicationBuilder().token(token).build()
 
-    conv_handler = ConversationHandler(
-        entry_points=[MessageHandler(filters.Regex("^Порахувати$"), ask_file_count)],
-        states={ASK_FILE_COUNT: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_file_count)]},
-        fallbacks=[CommandHandler("cancel", cancel)]
-    )
-
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(conv_handler)
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_file_count))
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     app.add_handler(MessageHandler(filters.Document.IMAGE, handle_photo))
 
@@ -111,6 +81,8 @@ async def build_application():
 
 
 async def run_webhook():
+    from aiohttp import web
+
     app = await build_application()
     webhook_url = os.getenv("WEBHOOK_URL", "").rstrip("/")
     await app.bot.set_webhook(f"{webhook_url}/webhook")
@@ -119,8 +91,7 @@ async def run_webhook():
     await app.updater.start_polling()
     print(f"🌐 Webhook зареєстровано: {webhook_url}/webhook")
 
-    aio_app = web.Application()  # ← створюється тут
-
+    aio_app = web.Application()
     async def telegram_webhook_handler(request):
         data = await request.json()
         await app.update_queue.put(data)
@@ -135,7 +106,6 @@ async def run_webhook():
 
 async def run_polling():
     print("🖥 Запуск у polling-режимі")
-
     app = await build_application()
 
     print("🧼 Знімаю webhook...")
@@ -148,18 +118,17 @@ async def run_polling():
 if __name__ == "__main__":
     if os.getenv("WEBHOOK_URL"):
         print("🌐 Запуск у режимі webhook (Railway)")
-
+        import aiohttp.web
 
         async def start_webhook_server():
             aio_app = await run_webhook()
-            runner = web.AppRunner(aio_app)
+            runner = aiohttp.web.AppRunner(aio_app)
             await runner.setup()
-            site = web.TCPSite(runner, host="0.0.0.0", port=int(os.getenv("PORT", "8000")))
+            site = aiohttp.web.TCPSite(runner, host="0.0.0.0", port=int(os.getenv("PORT", "8000")))
             await site.start()
             print("✅ AIOHTTP сервер запущено — очікуємо запити...")
             while True:
                 await asyncio.sleep(3600)
-
 
         asyncio.run(start_webhook_server())
     else:
